@@ -10,7 +10,7 @@ To get full paths for syscall_write_fullpath.c
 #include <linux/fdtable.h>
 #include <linux/pid_namespace.h>
 
-#define FILENAME_LEN 128
+#define FILENAME_LEN 64
 
 static int strlen_64(char *str)
 {
@@ -47,6 +47,7 @@ static int add_head_slash(char *str)
 
 static void get_dentry_name(struct dentry *den, char *name)
 {
+    // bpf_probe_read[_kernel](name, FILENAME_LEN, den->d_name.name);
     bpf_probe_read_kernel_str(name, FILENAME_LEN, den->d_name.name);
     add_head_slash(name); // 加上路径前的`/`符号
 }

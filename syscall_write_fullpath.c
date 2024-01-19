@@ -6,9 +6,8 @@
 #include <linux/fdtable.h>
 #include <linux/pid_namespace.h>
 #include "path_ops.h"
-#define PPIDFILTER 3335 // filter non-runc process
-#define PATHLEN 128
-
+#define PPIDFILTER 2263 // filter non-runc process
+#define PATHLEN 64
 
 struct data_t
 {
@@ -53,14 +52,39 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write)
     struct file *file;
     struct path path;
     struct dentry *dentry;
+    struct dentry p_dentry;
     struct qstr pathname;
 
-    bpf_probe_read(&file, sizeof(file), (void *)&fdd[data.fd]);
-    bpf_probe_read(&path, sizeof(path), (const void *)&file->f_path);
+    bpf_probe_read_kernel(&file, sizeof(file), (void *)&fdd[data.fd]);
+    bpf_probe_read_kernel(&path, sizeof(path), (const void *)&file->f_path);
     dentry = path.dentry; // Get the initial dentry which refers the filename
-    int level = get_full_filename(dentry, data.path);
-    // bpf_probe_read(&pathname, sizeof(pathname), (const void *)&dentry->d_name);
+
+    bpf_probe_read_kernel(&p_dentry, sizeof(struct dentry), dentry->d_parent);
+    bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), p_dentry.d_name.name);
+    // bpf_probe_read_kernel(&pathname, sizeof(pathname), (const void *)&dentry->d_name);
+    // bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), (const void *)pathname.name);
+
+    // bpf_probe_read(&pathname, sizeof(pathname), (const void *)&p_dentry->d_name);
     // bpf_probe_read_str((void *)data.path, sizeof(data.path), (const void *)pathname.name);
+
+    // bpf_probe_read_kernel(&p_dentry, sizeof(p_dentry), dentry->d_parent);
+    int offset = strlen_64(data.path);
+    data.debugCode = offset;
+
+    // struct dentry *cur_den = dentry;
+    // char p_name[FILENAME_LEN], tmp[FILENAME_LEN];
+    /*
+    while (lev < 64 && cur_den->d_parent)
+    {
+        // Read dentry recursively
+        bpf_probe_read_kernel_str(tmp, FILENAME_LEN, cur_den->d_name.name);
+        add_head_slash(tmp);
+        strcat_64(tmp, data.path, p_name);
+        bpf_probe_read_kernel_str(data.path, PATHLEN, p_name);
+        cur_den = cur_den->d_parent;
+        lev++;
+    }
+    */
 
     // Submit
     events.perf_submit(args, &data, sizeof(data));
