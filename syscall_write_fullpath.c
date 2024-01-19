@@ -58,18 +58,36 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write)
     bpf_probe_read_kernel(&file, sizeof(file), (void *)&fdd[data.fd]);
     bpf_probe_read_kernel(&path, sizeof(path), (const void *)&file->f_path);
     dentry = path.dentry; // Get the initial dentry which refers the filename
+    // bpf_probe_read_kernel(dentry, sizeof(dentry), (const void *)path.dentry);
 
-    bpf_probe_read_kernel(&p_dentry, sizeof(struct dentry), dentry->d_parent);
-    bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), p_dentry.d_name.name);
-    // bpf_probe_read_kernel(&pathname, sizeof(pathname), (const void *)&dentry->d_name);
-    // bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), (const void *)pathname.name);
+    // About parent
+    /*
+    if (!bpf_probe_read_kernel(&p_dentry, sizeof(p_dentry), (const void *)&dentry->d_parent))
+    {
+        data.debugCode = -1;
+    }*/
+    /*if (!bpf_probe_read_kernel(&pathname, sizeof(pathname), (const void *)&p_dentry.d_name))
+    {
+        data.debugCode = -2;
+    }*/
+    /*
+    pathname = p_dentry.d_name;
+    if (!bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), pathname.name))
+    {
+        data.debugCode = -3;
+    }
+    */
+
+    // The following is to read filename at the normal way
+    bpf_probe_read_kernel(&pathname, sizeof(pathname), (const void *)&dentry->d_name);
+    bpf_probe_read_kernel_str((void *)data.path, sizeof(data.path), (const void *)pathname.name);
 
     // bpf_probe_read(&pathname, sizeof(pathname), (const void *)&p_dentry->d_name);
     // bpf_probe_read_str((void *)data.path, sizeof(data.path), (const void *)pathname.name);
 
     // bpf_probe_read_kernel(&p_dentry, sizeof(p_dentry), dentry->d_parent);
     int offset = strlen_64(data.path);
-    data.debugCode = offset;
+    // data.debugCode = offset;
 
     // struct dentry *cur_den = dentry;
     // char p_name[FILENAME_LEN], tmp[FILENAME_LEN];
