@@ -5,7 +5,6 @@
 #include <linux/limits.h>
 #include <linux/fdtable.h>
 #include <linux/pid_namespace.h>
-#include "path_ops.h"
 #define PPIDFILTER 2263 // filter non-runc process
 #define PATHLEN 64
 
